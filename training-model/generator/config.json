@@ -1,40 +1,40 @@
 {
     "1a": {
-        "diameter_range": [15, 25],
-        "axis_variation": 0.2,
-        "dent_count": 20,
+        "diameter_range": [10, 25],
+        "axis_variation": 0.6,
+        "dent_count": 15,
         "exp": false,
         "hailpad_count": 5,
         "directory": "training-model/generator/output/1a"
     },
     "1b": {
-        "diameter_range": [40, 50],
-        "axis_variation": 0.2,
-        "dent_count": 20,
+        "diameter_range": [25, 40],
+        "axis_variation": 0.6,
+        "dent_count": 15,
         "exp": false,
         "hailpad_count": 5,
         "directory": "training-model/generator/output/1b"
     },
     "2": {
         "diameter_range": [20, 25],
-        "axis_variation": 0.2,
-        "dent_count": 300,
+        "axis_variation": 0.6,
+        "dent_count": 500,
         "exp": false,
         "hailpad_count": 5,
         "directory": "training-model/generator/output/2"
     },
     "3": {
-        "diameter_range": [10, 60],
-        "axis_variation": 0.2,
-        "dent_count": 300,
+        "diameter_range": [5, 40],
+        "axis_variation": 0.6,
+        "dent_count": 500,
         "exp": true,
         "hailpad_count": 5,
         "directory": "training-model/generator/output/3"
     },
     "4": {
-        "diameter_range": [10, 60],
-        "axis_variation": 0.2,
-        "dent_count": 600,
+        "diameter_range": [5, 40],
+        "axis_variation": 0.6,
+        "dent_count": 800,
         "exp": true,
         "hailpad_count": 5,
         "directory": "training-model/generator/output/4"

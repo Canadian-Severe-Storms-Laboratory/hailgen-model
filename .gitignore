@@ -1,2 +1,4 @@
 .venv
 training-model/generator/output
+training-model/generator/measurement.py
+refined/
