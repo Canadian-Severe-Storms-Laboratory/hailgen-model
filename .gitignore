@@ -1,4 +1,6 @@
 .venv
-training-model/generator/output
-training-model/generator/measurement.py
+.DS_Store
+
+dent-segmentation-model/generator/output
+dent-segmentation-model/generator/measurement.py
 refined/
