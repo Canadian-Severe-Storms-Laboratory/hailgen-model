@@ -2,6 +2,8 @@ import json
 import cv2
 import numpy as np
 import noise
+import h5py
+import matplotlib.pyplot as plt
 
 
 def generate(diameter_range: [float, float],
@@ -17,7 +19,6 @@ def generate(diameter_range: [float, float],
 
     for i in range(hailpad_count):
         image = np.zeros((IMAGE_SIZE, IMAGE_SIZE, 3), dtype=np.uint8)
-        mask = np.zeros((IMAGE_SIZE, IMAGE_SIZE), dtype=np.uint8)
 
         wind_angle = np.random.rand() * 360
 
@@ -28,11 +29,13 @@ def generate(diameter_range: [float, float],
         else:
             diameter_dist = np.random.uniform(
                 diameter_range[0], diameter_range[1], size=dent_count)
+            
+        masks = []
 
         for j in range(len(diameter_dist)):
             x = np.random.randint(0, IMAGE_SIZE)
             y = np.random.randint(0, IMAGE_SIZE)
-
+            
             # TODO: Determine axis ratio to classify as wind-driven dent
             major_axis = diameter_dist[j]
             minor_axis = major_axis * (1 - axis_variation * np.random.rand())
@@ -45,22 +48,19 @@ def generate(diameter_range: [float, float],
             dent = create_dent(
                 x, y, major_axis, minor_axis, angle, SCALE)
             
-            dent_mask = np.zeros_like(mask)
-            cv2.drawContours(dent_mask, [dent], -1, 255, -1)
-
-            overlap = cv2.bitwise_and(mask, dent_mask)
-            non_overlap = cv2.bitwise_and(dent_mask, cv2.bitwise_not(overlap))
-
-            # Label overlapping regions in red
-            image[overlap == 255] = (0, 0, 255)
-            image[non_overlap == 255] = (255, 255, 255)
-
-            mask = cv2.bitwise_or(mask, dent_mask)
-
-        cv2.imwrite(f"{directory}/masks/hailpad_{i}.png", image) # Ground truth
-        
-        image[np.all(image == [0, 0, 255], axis=-1)] = [255, 255, 255] # Normal binary image
-        cv2.imwrite(f"{directory}/hailpad_{i}.png", image)
+            dent_mask = np.zeros((IMAGE_SIZE, IMAGE_SIZE, 3), dtype=np.uint8)
+            cv2.drawContours(dent_mask, [dent], -1, (255, 255, 255), -1)
+            masks.append(dent_mask)
+            
+            print(len(masks))
+            
+            cv2.drawContours(image, [dent], -1, (255, 255, 255), -1)
+                        
+        # image = cv2.resize(image, (256, 256), interpolation=cv2.INTER_AREA)
+        # _, image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY) # TODO
+                
+        create_point_query(image, masks, directory, i)
+        cv2.imwrite(f"{directory}/hailpad_{i}.png", image) # TODO: Remove
         
 
 def create_dent(cx, cy, major_axis, minor_axis, angle, scale):
@@ -91,6 +91,33 @@ def create_dent(cx, cy, major_axis, minor_axis, angle, scale):
         points.append([x_final, y_final])
 
     return np.array(points, dtype=np.int32)
+
+
+def create_point_query(image, masks, directory, hailpad_index):
+    """Helper function to add a fourth channel for random point queries and create the corresponding dent mask output"""
+
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    height, width = image.shape
+    
+    dent_pixels = np.column_stack(np.where(image == 255))
+    NUM_POINTS = 100
+    
+    point_indices = np.random.choice(len(dent_pixels), size=NUM_POINTS, replace=False)
+    points = dent_pixels[point_indices]
+        
+    with h5py.File(f"{directory}/hailpad_{hailpad_index}.h5", "w") as h5f:      
+        for point_index, point in enumerate(points):
+            x, y = point[:2]
+            
+            point_image = np.zeros((height, width, 4), dtype=np.uint8)
+            point_image[:, :, 0] = image
+            point_image[x, y, 3] = 1
+            
+            for mask_index, mask in enumerate(masks):
+                if np.array_equal(mask[x, y], [255, 255, 255]):
+                    point_group = h5f.create_group(f"point_{point_index}_dent_{mask_index}")
+                    point_group.create_dataset("point_image", data=point_image)
+                    point_group.create_dataset("mask_image", data=mask)
 
 
 with open('dent-segmentation-model/generator/config.json', 'r') as f:
