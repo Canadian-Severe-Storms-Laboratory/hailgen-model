@@ -6,23 +6,45 @@ import h5py
 import matplotlib.pyplot as plt
 
 
+def main():
+    '''Run simulated hailpad generation pipeline based on config data'''
+
+    with open('dent-segmentation-model/generator/config.json', 'r') as f:
+        configs = json.load(f)
+
+    for hailpad_type, config in configs.items():
+        print(f'Generating hailpads for [Category {hailpad_type}]...')
+        generate(
+            diameter_range=tuple(config['diameter_range']),
+            axis_variation=config['axis_variation'],
+            dent_count=config['dent_count'],
+            exp=config['exp'],
+            hailpad_count=config['hailpad_count'],
+            hailpad_type=hailpad_type,
+            directory=config['directory']
+        )
+
+
 def generate(diameter_range: [float, float],
              axis_variation: float,
              dent_count: int,
              exp: bool,
              hailpad_count: int,
+             hailpad_type: str,
              directory: str):
-    """Generate simulated hailpad depth map binarizations based on config data"""
+    '''Generate simulated hailpad depth map binarizations based on config data'''
 
     IMAGE_SIZE = 1000
     SCALE = 0.3
 
     for i in range(hailpad_count):
-        image = np.zeros((IMAGE_SIZE, IMAGE_SIZE, 3), dtype=np.uint8)
+        print(f'[Category {hailpad_type}] {i + 1}/{hailpad_count}')
+        image = np.zeros((IMAGE_SIZE, IMAGE_SIZE, 1), dtype=np.float32)
 
         wind_angle = np.random.rand() * 360
 
         if exp:
+            # Exponential approximation: https://stackoverflow.com/questions/69828806/scaling-numpy-exponential-random-generator
             beta = -(diameter_range[1])/np.log(1 - 0.999)
             diameter_dist = np.random.exponential(scale=beta, size=dent_count)
             diameter_dist = diameter_dist[diameter_dist >= diameter_range[0]]
@@ -48,23 +70,30 @@ def generate(diameter_range: [float, float],
             dent = create_dent(
                 x, y, major_axis, minor_axis, angle, SCALE)
             
-            dent_mask = np.zeros((IMAGE_SIZE, IMAGE_SIZE, 3), dtype=np.uint8)
-            cv2.drawContours(dent_mask, [dent], -1, (255, 255, 255), -1)
+            dent_mask = np.zeros((IMAGE_SIZE, IMAGE_SIZE, 1), dtype=np.float32)
+            cv2.drawContours(dent_mask, [dent], -1, 1, -1)
+            
+            dent_mask = cv2.resize(dent_mask, (256, 256), interpolation=cv2.INTER_AREA)
+            _, dent_mask = cv2.threshold(dent_mask, 0, 1, cv2.THRESH_BINARY)
+            
             masks.append(dent_mask)
             
-            print(len(masks))
-            
-            cv2.drawContours(image, [dent], -1, (255, 255, 255), -1)
-                        
-        # image = cv2.resize(image, (256, 256), interpolation=cv2.INTER_AREA)
-        # _, image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY) # TODO
-                
-        create_point_query(image, masks, directory, i)
-        cv2.imwrite(f"{directory}/hailpad_{i}.png", image) # TODO: Remove
-        
+            cv2.drawContours(image, [dent], -1, 1, -1)
+         
+        image = cv2.resize(image, (256, 256), interpolation=cv2.INTER_AREA)
+        _, image = cv2.threshold(image, 0, 1, cv2.THRESH_BINARY)
 
-def create_dent(cx, cy, major_axis, minor_axis, angle, scale):
-    """Helper function to create irregular dent shape from base ellipse using Perlin noise along ellipse segments"""
+        create_point_query(image, masks, directory, i)
+        cv2.imwrite(f'{directory}/hailpad_{i}.png', image * 255) # TODO: Remove
+
+
+def create_dent(cx: float,
+                cy: float,
+                major_axis: float,
+                minor_axis: float,
+                angle: float,
+                scale: float):
+    '''Create irregular dent shape from base ellipse using Perlin noise along ellipse segments'''
 
     NUM_POINTS = 50
     points = []
@@ -93,43 +122,39 @@ def create_dent(cx, cy, major_axis, minor_axis, angle, scale):
     return np.array(points, dtype=np.int32)
 
 
-def create_point_query(image, masks, directory, hailpad_index):
-    """Helper function to add a fourth channel for random point queries and create the corresponding dent mask output"""
+def create_point_query(image,
+                       masks,
+                       directory: str,
+                       hailpad_index: int):
+    '''Add a fourth channel for random point queries and create the corresponding dent mask output'''
 
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     height, width = image.shape
     
-    dent_pixels = np.column_stack(np.where(image == 255))
+    dent_pixels = np.column_stack(np.where(image == 1))
     NUM_POINTS = 100
     
     point_indices = np.random.choice(len(dent_pixels), size=NUM_POINTS, replace=False)
     points = dent_pixels[point_indices]
+    
+    mask_sizes = [(mask, np.sum(mask == 1)) for mask in masks]
+    masks_sorted = sorted(mask_sizes, key=lambda x: x[1], reverse=True)
         
-    with h5py.File(f"{directory}/hailpad_{hailpad_index}.h5", "w") as h5f:      
+    with h5py.File(f'{directory}/hailpad_{hailpad_index}.h5', 'w') as h5f:      
         for point_index, point in enumerate(points):
             x, y = point[:2]
             
-            point_image = np.zeros((height, width, 4), dtype=np.uint8)
+            point_image = np.zeros((height, width, 2), dtype=np.float32)
             point_image[:, :, 0] = image
-            point_image[x, y, 3] = 1
-            
-            for mask_index, mask in enumerate(masks):
-                if np.array_equal(mask[x, y], [255, 255, 255]):
-                    point_group = h5f.create_group(f"point_{point_index}_dent_{mask_index}")
-                    point_group.create_dataset("point_image", data=point_image)
-                    point_group.create_dataset("mask_image", data=mask)
+            point_image[x, y, 1] = 1
+
+            for mask_index, (mask, _) in enumerate(masks_sorted):
+                if np.array_equal(mask[x, y], 1):
+                    mask = mask[..., np.newaxis]
+                    point_group = h5f.create_group(f'point_{point_index}_mask_{mask_index}')
+                    point_group.create_dataset('point', data=point_image)
+                    point_group.create_dataset('mask', data=mask)
+                    break
 
 
-with open('dent-segmentation-model/generator/config.json', 'r') as f:
-    configs = json.load(f)
-
-for hailpad_type, config in configs.items():
-    print(f"Generating hailpads for Category {hailpad_type}...")
-    generate(
-        diameter_range=tuple(config['diameter_range']),
-        axis_variation=config['axis_variation'],
-        dent_count=config['dent_count'],
-        exp=config['exp'],
-        hailpad_count=config['hailpad_count'],
-        directory=config['directory']
-    )
+if __name__ == '__main__':
+    main()

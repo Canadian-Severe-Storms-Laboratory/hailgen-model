@@ -1,6 +1,7 @@
 .venv
 .DS_Store
 
+dent-segmentation-model/__pycache__
 dent-segmentation-model/generator/output
 dent-segmentation-model/generator/measurement.py
 refined/
