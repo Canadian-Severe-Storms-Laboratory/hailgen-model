@@ -4,7 +4,7 @@
         "axis_variation": 0.6,
         "dent_count": 15,
         "exp": false,
-        "hailpad_count": 5,
+        "hailpad_count": 200,
         "directory": "dent-segmentation-model/generator/output/1a"
     },
     "1b": {

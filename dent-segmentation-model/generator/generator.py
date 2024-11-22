@@ -126,7 +126,7 @@ def create_point_query(image,
                        masks,
                        directory: str,
                        hailpad_index: int):
-    '''Add a fourth channel for random point queries and create the corresponding dent mask output'''
+    '''Add a second channel for random point queries and create the corresponding dent mask output'''
 
     height, width = image.shape
     
@@ -149,7 +149,6 @@ def create_point_query(image,
 
             for mask_index, (mask, _) in enumerate(masks_sorted):
                 if np.array_equal(mask[x, y], 1):
-                    mask = mask[..., np.newaxis]
                     point_group = h5f.create_group(f'point_{point_index}_mask_{mask_index}')
                     point_group.create_dataset('point', data=point_image)
                     point_group.create_dataset('mask', data=mask)
