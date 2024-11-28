@@ -8,7 +8,9 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    '''Compile and build model'''
+    '''
+    Compile and build model
+    '''
     
     BACKBONE = 'vgg19'
     EPOCHS = 5
@@ -26,8 +28,8 @@ def main():
     print('Compiling model...')
     model = sm.Unet(BACKBONE, encoder_weights=None, input_shape=(None, None, 2))
     model.compile(
-        'Adam',
-        loss='binary_crossentropy',
+        optimizer=keras.optimizers.Adam(learning_rate=0.00001),
+        loss='dice',
         metrics=[sm.metrics.iou_score]
     )
 

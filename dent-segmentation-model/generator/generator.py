@@ -2,12 +2,15 @@ import json
 import cv2
 import numpy as np
 import noise
+from scipy.ndimage import label
 import h5py
 import matplotlib.pyplot as plt
 
 
 def main():
-    '''Run simulated hailpad generation pipeline based on config data'''
+    '''
+    Run simulated hailpad generation pipeline based on config data
+    '''
 
     with open('dent-segmentation-model/generator/config.json', 'r') as f:
         configs = json.load(f)
@@ -32,7 +35,9 @@ def generate(diameter_range: [float, float],
              hailpad_count: int,
              hailpad_type: str,
              directory: str):
-    '''Generate simulated hailpad depth map binarizations based on config data'''
+    '''
+    Generate simulated hailpad depth map binarizations based on config data
+    '''
 
     IMAGE_SIZE = 1000
     SCALE = 0.3
@@ -93,7 +98,9 @@ def create_dent(cx: float,
                 minor_axis: float,
                 angle: float,
                 scale: float):
-    '''Create irregular dent shape from base ellipse using Perlin noise along ellipse segments'''
+    '''
+    Create irregular dent shape from base ellipse using Perlin noise along ellipse segments
+    '''
 
     NUM_POINTS = 50
     points = []
@@ -126,33 +133,42 @@ def create_point_query(image,
                        masks,
                        directory: str,
                        hailpad_index: int):
-    '''Add a second channel for random point queries and create the corresponding dent mask output'''
+    '''
+    Add a second channel for random point queries on each dent and create the corresponding point-dent pairs;
+    for clustered dents, the largest dent is chosen if a point lands in the overlapping region
+    '''
 
     height, width = image.shape
-    
-    dent_pixels = np.column_stack(np.where(image == 1))
-    NUM_POINTS = 100
-    
-    point_indices = np.random.choice(len(dent_pixels), size=NUM_POINTS, replace=False)
-    points = dent_pixels[point_indices]
-    
-    mask_sizes = [(mask, np.sum(mask == 1)) for mask in masks]
-    masks_sorted = sorted(mask_sizes, key=lambda x: x[1], reverse=True)
         
-    with h5py.File(f'{directory}/hailpad_{hailpad_index}.h5', 'w') as h5f:      
-        for point_index, point in enumerate(points):
+    combined_mask = np.sum(masks, axis=0)
+    overlapping_region = (combined_mask > 1)
+        
+    with h5py.File(f'{directory}/hailpad_{hailpad_index}.h5', 'w') as h5f:
+        # for cluster, (mask, mask_index) in largest_masks.items(): 
+        for mask_index, mask in enumerate(masks):           
+            mask_pixels = np.column_stack(np.where(mask == 1))
+            
+            point_index = np.random.choice(len(mask_pixels))
+            point = mask_pixels[point_index]
+            
             x, y = point[:2]
             
+            if overlapping_region[x, y]:
+                largest_mask = max(
+                    (m for m in masks if m[x, y] == 1),
+                    key=lambda m: np.sum(m == 1)
+                )
+                selected_mask = largest_mask
+            else:
+                selected_mask = mask
+                
             point_image = np.zeros((height, width, 2), dtype=np.float32)
             point_image[:, :, 0] = image
             point_image[x, y, 1] = 1
-
-            for mask_index, (mask, _) in enumerate(masks_sorted):
-                if np.array_equal(mask[x, y], 1):
-                    point_group = h5f.create_group(f'point_{point_index}_mask_{mask_index}')
-                    point_group.create_dataset('point', data=point_image)
-                    point_group.create_dataset('mask', data=mask)
-                    break
+            
+            point_group = h5f.create_group(f'point_mask_{mask_index}')
+            point_group.create_dataset('point', data=point_image)
+            point_group.create_dataset('mask', data=mask)
 
 
 if __name__ == '__main__':

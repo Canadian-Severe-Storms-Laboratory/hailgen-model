@@ -7,7 +7,9 @@ from sklearn.model_selection import train_test_split
 
 
 class DatasetLoader(Sequence):
-    '''Load data from dataset in batches'''
+    '''
+    Load data from dataset in batches
+    '''
     
     def __init__(self, dataset, batch_size, shuffle=False, **kwargs):
         super().__init__(**kwargs)
@@ -20,7 +22,9 @@ class DatasetLoader(Sequence):
         self.on_epoch_end()
 
     def __getitem__(self, i):
-        '''Get a batch of point and dent masks'''
+        '''
+        Get a batch of point and dent masks
+        '''
         
         start = i * self.batch_size
         stop = (i + 1) * self.batch_size
@@ -43,13 +47,17 @@ class DatasetLoader(Sequence):
         return batch_points, batch_masks
     
     def on_epoch_end(self):
-        '''Shuffle indices at the end of each epoch'''
+        '''
+        Shuffle indices at the end of each epoch
+        '''
         
         if self.shuffle:
             self.indices = np.random.permutation(self.indices)
             
     def __len__(self):
-        '''Return the number of steps per epoch'''
+        '''
+        Return the number of steps per epoch
+        '''
                 
         return len(self.indices) // self.batch_size
 
@@ -61,7 +69,9 @@ class Dataset:
         self.sample_index = self.build_index()
         
     def build_index(self):
-        '''Build index of all point-mask pairs (i.e., samples)'''
+        '''
+        Build index of all point-mask pairs (i.e., samples)
+        '''
         
         sample_index = []
         
@@ -73,7 +83,9 @@ class Dataset:
         return sample_index
     
     def __getitem__(self, i):
-        '''Return a point-mask pair'''
+        '''
+        Return a point-mask pair
+        '''
         
         file_index, point_group = self.sample_index[i]
         file_path = self.file_paths[file_index]
@@ -85,13 +97,17 @@ class Dataset:
         return point, mask
             
     def __len__(self):
-        '''Return the number of point-mask pairs'''
+        '''
+        Return the number of point-mask pairs
+        '''
         
         return len(self.sample_index)
 
 
 def prepare_datasets(batch_size):
-    '''Batch-load generated training and validation data for model'''
+    '''
+    Batch-load generated training and validation data for model
+    '''
     
     TEST_SIZE = 0.1
     RANDOM_STATE = 50
@@ -123,26 +139,27 @@ def prepare_datasets(batch_size):
 
 # --- Uncomment to visualize .h5 point-mask group ---
 # import matplotlib.pyplot as plt
-
-# '''Test input-output pair creation'''
-# with h5py.File('', 'r') as h5f:
-#     print('Keys: ', list(h5f.keys()))
-    
-#     first_group_key = list(h5f.keys())[0] 
-#     first_group = h5f[first_group_key]
-    
-#     point_image = first_group['point'][:, :, 1]
-#     mask_image = first_group['mask'][:]
-    
-#     plt.figure(figsize=(10, 5))
-#     plt.subplot(1, 2, 1)
-#     plt.title('Point Image')
-#     plt.imshow(point_image, cmap='gray')
-#     plt.axis('off')
-
-#     plt.subplot(1, 2, 2)
-#     plt.title('Mask Image')
-#     plt.imshow(mask_image, cmap='gray')
-#     plt.axis('off')
-
-#     plt.show()
+# file_paths = []
+# with open('dent-segmentation-model/generator/config.json', 'r') as f:
+#     configs = json.load(f)
+#     for hailpad_type, config in configs.items():
+#         hailpad_count = config['hailpad_count']
+#         for i in range(hailpad_count):
+#             file_paths.append(f'dent-segmentation-model/generator/output/{hailpad_type}/hailpad_{i}.h5')
+# for file_path in file_paths:
+#     print(f"Opening file: {file_path}")
+#     with h5py.File(file_path, 'r') as h5f:
+#         for group_name in h5f.keys():
+#             group = h5f[group_name]
+#             point_image = group['point'][:]
+#             mask = group['mask'][:]
+#             second_channel = point_image[:, :, 1]
+#             fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+#             fig.canvas.manager.set_window_title(file_path)
+#             axes[0].imshow(second_channel, cmap='gray')
+#             axes[0].set_title(f"Point - {group_name}")
+#             axes[0].axis('off')
+#             axes[1].imshow(mask, cmap='gray')
+#             axes[1].set_title(f"Mask - {group_name}")
+#             axes[1].axis('off')
+#             plt.show()
