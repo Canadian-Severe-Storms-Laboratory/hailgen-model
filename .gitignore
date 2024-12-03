@@ -6,3 +6,4 @@ dent-segmentation-model/generator/output
 dent-segmentation-model/generator/measurement.py
 refined/
 results/
+test-binarizations/

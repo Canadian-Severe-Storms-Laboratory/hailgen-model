@@ -137,6 +137,8 @@ def create_point_query(image,
     Add a second channel for random point queries on each dent and create the corresponding point-dent pairs;
     for clustered dents, the largest dent is chosen if a point lands in the overlapping region
     '''
+    
+    NUM_POINTS = 2 # Number of randomly-selected points per mask
 
     height, width = image.shape
         
@@ -144,23 +146,23 @@ def create_point_query(image,
     overlapping_region = (combined_mask > 1)
         
     with h5py.File(f'{directory}/hailpad_{hailpad_index}.h5', 'w') as h5f:
-        # for cluster, (mask, mask_index) in largest_masks.items(): 
         for mask_index, mask in enumerate(masks):           
             mask_pixels = np.column_stack(np.where(mask == 1))
             
-            point_index = np.random.choice(len(mask_pixels))
-            point = mask_pixels[point_index]
+            point_indices = np.random.choice(len(mask_pixels), size=NUM_POINTS, replace=False)
+            points = mask_pixels[point_indices]
             
-            x, y = point[:2]
+            for point_index, point in enumerate(points):
+                x, y = point[:2]
             
-            if overlapping_region[x, y]:
-                largest_mask = max(
-                    (m for m in masks if m[x, y] == 1),
-                    key=lambda m: np.sum(m == 1)
-                )
-                selected_mask = largest_mask
-            else:
-                selected_mask = mask
+                if overlapping_region[x, y]:
+                    largest_mask = max(
+                        (m for m in masks if m[x, y] == 1),
+                        key=lambda m: np.sum(m == 1)
+                    )
+                    selected_mask = largest_mask
+                else:
+                    selected_mask = mask
                 
             point_image = np.zeros((height, width, 2), dtype=np.float32)
             point_image[:, :, 0] = image
