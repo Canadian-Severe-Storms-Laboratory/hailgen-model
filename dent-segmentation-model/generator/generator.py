@@ -164,13 +164,13 @@ def create_point_query(image,
                 else:
                     selected_mask = mask
                 
-            point_image = np.zeros((height, width, 2), dtype=np.float32)
-            point_image[:, :, 0] = image
-            point_image[x, y, 1] = 1
-            
-            point_group = h5f.create_group(f'point_mask_{mask_index}')
-            point_group.create_dataset('point', data=point_image)
-            point_group.create_dataset('mask', data=mask)
+                point_image = np.zeros((height, width, 2), dtype=np.float32)
+                point_image[:, :, 0] = image
+                point_image[x, y, 1] = 1
+                
+                point_group = h5f.create_group(f'point_mask_{mask_index}_{point_index}')
+                point_group.create_dataset('point', data=point_image)
+                point_group.create_dataset('mask', data=selected_mask)
 
 
 if __name__ == '__main__':
