@@ -24,6 +24,7 @@ def main():
             exp=config['exp'],
             hailpad_count=config['hailpad_count'],
             hailpad_type=hailpad_type,
+            num_points=config['num_points'],
             directory=config['directory']
         )
 
@@ -34,6 +35,7 @@ def generate(diameter_range: [float, float],
              exp: bool,
              hailpad_count: int,
              hailpad_type: str,
+             num_points: int,
              directory: str):
     '''
     Generate simulated hailpad depth map binarizations based on config data
@@ -88,7 +90,7 @@ def generate(diameter_range: [float, float],
         image = cv2.resize(image, (256, 256), interpolation=cv2.INTER_AREA)
         _, image = cv2.threshold(image, 0, 1, cv2.THRESH_BINARY)
 
-        create_point_query(image, masks, directory, i)
+        create_point_queries(image, masks, directory, i, num_points)
         cv2.imwrite(f'{directory}/hailpad_{i}.png', image * 255) # TODO: Remove
 
 
@@ -129,17 +131,16 @@ def create_dent(cx: float,
     return np.array(points, dtype=np.int32)
 
 
-def create_point_query(image,
-                       masks,
-                       directory: str,
-                       hailpad_index: int):
+def create_point_queries(image,
+                         masks,
+                         directory: str,
+                         hailpad_index: int,
+                         num_points: int):
     '''
     Add a second channel for random point queries on each dent and create the corresponding point-dent pairs;
     for clustered dents, the largest dent is chosen if a point lands in the overlapping region
     '''
     
-    NUM_POINTS = 2 # Number of randomly-selected points per mask
-
     height, width = image.shape
         
     combined_mask = np.sum(masks, axis=0)
@@ -149,7 +150,7 @@ def create_point_query(image,
         for mask_index, mask in enumerate(masks):           
             mask_pixels = np.column_stack(np.where(mask == 1))
             
-            point_indices = np.random.choice(len(mask_pixels), size=NUM_POINTS, replace=False)
+            point_indices = np.random.choice(len(mask_pixels), size=num_points, replace=False)
             points = mask_pixels[point_indices]
             
             for point_index, point in enumerate(points):
