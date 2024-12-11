@@ -147,7 +147,7 @@ def prepare_datasets(batch_size):
 #         for i in range(hailpad_count):
 #             file_paths.append(f'dent-segmentation-model/generator/output/{hailpad_type}/hailpad_{i}.h5')
 # for file_path in file_paths:
-#     print(f"Opening file: {file_path}")
+#     print(f'Opening file: {file_path}')
 #     with h5py.File(file_path, 'r') as h5f:
 #         for group_name in h5f.keys():
 #             group = h5f[group_name]
@@ -157,9 +157,9 @@ def prepare_datasets(batch_size):
 #             fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 #             fig.canvas.manager.set_window_title(file_path)
 #             axes[0].imshow(second_channel, cmap='gray')
-#             axes[0].set_title(f"Point - {group_name}")
+#             axes[0].set_title(f'Point - {group_name}')
 #             axes[0].axis('off')
 #             axes[1].imshow(mask, cmap='gray')
-#             axes[1].set_title(f"Mask - {group_name}")
+#             axes[1].set_title(f'Mask - {group_name}')
 #             axes[1].axis('off')
 #             plt.show()

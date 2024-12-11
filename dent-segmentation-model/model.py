@@ -26,7 +26,11 @@ def main():
     print(f"Validation points shape: {x_val_batch.shape}, Validation masks shape: {y_val_batch.shape}")
 
     print('Compiling model...')
-    model = sm.Unet(BACKBONE, encoder_weights=None, input_shape=(None, None, 2))
+    model = sm.Unet(
+        BACKBONE,
+        encoder_weights=None,
+        input_shape=(None, None, 2)
+    )
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=0.00001),
         loss='dice',

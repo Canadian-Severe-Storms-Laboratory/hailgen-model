@@ -150,6 +150,9 @@ def create_point_queries(image,
         for mask_index, mask in enumerate(masks):           
             mask_pixels = np.column_stack(np.where(mask == 1))
             
+            if len(mask_pixels) < num_points:
+                num_points = len(mask_pixels)
+            
             point_indices = np.random.choice(len(mask_pixels), size=num_points, replace=False)
             points = mask_pixels[point_indices]
             
