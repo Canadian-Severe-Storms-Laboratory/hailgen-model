@@ -20,10 +20,10 @@ def main():
     train_dataset_loader, val_dataset_loader = prepare_datasets(BATCH_SIZE)
         
     x_batch, y_batch = train_dataset_loader[0]
-    print(f"Training points shape: {x_batch.shape}, Train masks shape: {y_batch.shape}")
+    print(f'Training points shape: {x_batch.shape}, Train masks shape: {y_batch.shape}')
 
     x_val_batch, y_val_batch = val_dataset_loader[0]
-    print(f"Validation points shape: {x_val_batch.shape}, Validation masks shape: {y_val_batch.shape}")
+    print(f'Validation points shape: {x_val_batch.shape}, Validation masks shape: {y_val_batch.shape}')
 
     print('Compiling model...')
     model = sm.Unet(

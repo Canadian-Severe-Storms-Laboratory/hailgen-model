@@ -1,13 +1,13 @@
-import segmentation_models as sm
-import keras
-from skimage.morphology import skeletonize
-import numpy as np
-import cv2
 import os
 os.environ['SM_FRAMEWORK'] = 'tf.keras'
 
+import keras
+import segmentation_models as sm
+from skimage.morphology import skeletonize
+import numpy as np
+import cv2
 
-input_data = []
+
 FOLDER_PATH = 'dent-segmentation-model/test-binarizations'
 WEIGHTS_PATH = 'best_model.weights.h5'
 BACKBONE = 'vgg19'
@@ -71,8 +71,8 @@ def prepare_input_data(image, points):
     Create point-mask pairs for inputs
     '''
 
-    # TODO: Determine if need to resize from 1000x1000 to 256x256 (?)
-    height, width = image.shape
+    input_data = []
+    height, width = image.shape  # TODO: Determine if need to resize from 1000x1000 to 256x256 (?)
 
     for (x, y) in points:
         point_image = np.zeros((height, width, 2), dtype=np.float32)
@@ -80,6 +80,8 @@ def prepare_input_data(image, points):
         point_image[x, y, 1] = 1
 
         input_data.append(point_image)
+        
+    return input_data
 
 
 def get_iou(mask1, mask2):
@@ -131,9 +133,14 @@ def main():
 
     for file_name in os.listdir(FOLDER_PATH):
         file_path = os.path.join(FOLDER_PATH, file_name)
+        
         image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
         points = get_points(image)
-        prepare_input_data(image, points)
+        
+        input_data = prepare_input_data(image, points)
+        input_data = np.stack(input_data, axis=0)
+        print(f"Input data shape: {input_data.shape}")
+        
         predictions = model.predict(input_data)
 
 
