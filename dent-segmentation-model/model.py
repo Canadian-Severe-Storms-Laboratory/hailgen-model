@@ -45,11 +45,9 @@ def main():
     print('Building model...')
     history = model.fit(
         train_dataset_loader,
-        # steps_per_epoch=len(train_dataset_loader),
         epochs=EPOCHS,
         callbacks = callbacks,
-        validation_data=val_dataset_loader,
-        # validation_steps=len(val_dataset_loader)
+        validation_data=val_dataset_loader
     )
 
     plt.figure(figsize=(30, 5))
