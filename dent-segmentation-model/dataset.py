@@ -65,7 +65,6 @@ class DatasetLoader(Sequence):
 class Dataset:
     def __init__(self, file_paths):
         self.file_paths = file_paths
-        self.NUM_POINTS = 100
         self.sample_index = self.build_index()
         
     def build_index(self):

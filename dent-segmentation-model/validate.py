@@ -8,11 +8,6 @@ import numpy as np
 import cv2
 
 
-FOLDER_PATH = 'dent-segmentation-model/test-binarizations'
-WEIGHTS_PATH = 'best_model.weights.h5'
-BACKBONE = 'vgg19'
-
-
 def get_points(image):
     '''
     Create points along dent cluster skeletons
@@ -68,11 +63,11 @@ def get_points(image):
 
 def prepare_input_data(image, points):
     '''
-    Create point-mask pairs for inputs
+    Create point-mask pair for input
     '''
 
     input_data = []
-    height, width = image.shape  # TODO: Determine if need to resize from 1000x1000 to 256x256 (?)
+    height, width = image.shape
 
     for (x, y) in points:
         point_image = np.zeros((height, width, 2), dtype=np.float32)
@@ -104,7 +99,7 @@ def refine_outputs(outputs):
     for output in outputs:
         is_overlapping = False
         for filtered_output in filtered_outputs:
-            iou = calculate_iou(output, filtered_output)
+            iou = get_iou(output, filtered_output)
             if iou > THRESHOLD:
                 is_overlapping = True
                 break
@@ -114,10 +109,29 @@ def refine_outputs(outputs):
     return filtered_outputs
 
 
+def batch_predict(model, input_data, batch_size):
+    '''
+    Perform predictions on inputs in batches
+    '''
+    
+    predictions = []
+        
+    for i in range(0, len(input_data), batch_size):
+        batch = input_data[i:i+batch_size]
+        print(f'Batch input data shape: {batch.shape}')
+        predictions.append(model.predict(batch))
+        
+    return np.concatenate(predictions, axis=0)
+
 def main():
     '''
     Validate model on real hailpad binarizations
     '''
+    
+    FOLDER_PATH = 'dent-segmentation-model/test-binarizations'
+    WEIGHTS_PATH = 'best_model.weights.h5'
+    BACKBONE = 'vgg19'
+    BATCH_SIZE = 4
 
     model = sm.Unet(
         BACKBONE,
@@ -139,9 +153,19 @@ def main():
         
         input_data = prepare_input_data(image, points)
         input_data = np.stack(input_data, axis=0)
-        print(f"Input data shape: {input_data.shape}")
+        print(f'Input data shape: {input_data.shape}')
         
-        predictions = model.predict(input_data)
+        predictions = batch_predict(model, input_data, BATCH_SIZE)
+        
+        for prediction in predictions:                        
+            mask_resized = cv2.resize(prediction, (image.shape[1], image.shape[0]), interpolation=cv2.INTER_NEAREST)
+            mask_resized_uint8 = (mask_resized * 255).astype(np.uint8)
+            mask_color = cv2.applyColorMap(mask_resized_uint8, cv2.COLORMAP_JET)
+            
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+            predicted_overlay = cv2.addWeighted(image, 0.5, mask_color, 1, 0)
+            cv2.imshow(f'Predicted Mask {file_name}', prediction)
+            cv2.waitKey(0)
 
 
 if __name__ == '__main__':
