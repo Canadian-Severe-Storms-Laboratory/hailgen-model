@@ -71,7 +71,7 @@ def prepare_input_data(image, points):
 
     for (x, y) in points:
         point_image = np.zeros((height, width, 2), dtype=np.float32)
-        point_image[:, :, 0] = image
+        point_image[:, :, 0] = image / 255
         point_image[x, y, 1] = 1
 
         input_data.append(point_image)
@@ -157,15 +157,24 @@ def main():
         
         predictions = batch_predict(model, input_data, BATCH_SIZE)
         
-        for prediction in predictions:                        
-            mask_resized = cv2.resize(prediction, (image.shape[1], image.shape[0]), interpolation=cv2.INTER_NEAREST)
-            mask_resized_uint8 = (mask_resized * 255).astype(np.uint8)
-            mask_color = cv2.applyColorMap(mask_resized_uint8, cv2.COLORMAP_JET)
-            
-            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-            predicted_overlay = cv2.addWeighted(image, 0.5, mask_color, 1, 0)
-            cv2.imshow(f'Predicted Mask {file_name}', prediction)
-            cv2.waitKey(0)
+        for i, prediction in enumerate(predictions):
+            np.save(f'predictions-/prediction_{i}', prediction)
+
+            # --- Uncomment to visualize predictions ---        
+            # combined_image = None
+            # random.seed(42)
+
+            # if combined_image is None:
+            #     combined_image = np.zeros((prediction.shape[0], prediction.shape[1], 3), dtype=np.uint8)
+
+            # color = random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
+            # white_pixels = np.where(image == 1)
+            # combined_image[white_pixels[0], white_pixels[1]] = color
+
+            # combined_image_bgr = cv2.cvtColor(combined_image, cv2.COLOR_RGB2BGR)
+
+            # cv2.imshow("Combined Predictions", combined_image_bgr)
+            # cv2.waitKey(0)
 
 
 if __name__ == '__main__':
