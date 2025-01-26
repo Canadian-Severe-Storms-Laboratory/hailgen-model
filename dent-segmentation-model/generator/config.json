@@ -4,8 +4,8 @@
         "axis_variation": 0.6,
         "dent_count": 15,
         "exp": false,
-        "hailpad_count": 30,
-        "num_points": 1,
+        "hailpad_count": 500,
+        "num_points": 3,
         "directory": "dent-segmentation-model/generator/output/1a"
     },
     "1b": {
@@ -13,8 +13,8 @@
         "axis_variation": 0.6,
         "dent_count": 15,
         "exp": false,
-        "hailpad_count": 30,
-        "num_points": 1,
+        "hailpad_count": 500,
+        "num_points": 3,
         "directory": "dent-segmentation-model/generator/output/1b"
     },
     "2": {
@@ -22,7 +22,7 @@
         "axis_variation": 0.6,
         "dent_count": 900,
         "exp": false,
-        "hailpad_count": 30,
+        "hailpad_count": 50,
         "num_points": 4,
         "directory": "dent-segmentation-model/generator/output/2"
     },
@@ -31,7 +31,7 @@
         "axis_variation": 0.6,
         "dent_count": 500,
         "exp": true,
-        "hailpad_count": 30,
+        "hailpad_count": 100,
         "num_points": 3,
         "directory": "dent-segmentation-model/generator/output/3"
     },
@@ -40,7 +40,7 @@
         "axis_variation": 0.6,
         "dent_count": 900,
         "exp": true,
-        "hailpad_count": 30,
+        "hailpad_count": 100,
         "num_points": 3,
         "directory": "dent-segmentation-model/generator/output/4"
     }

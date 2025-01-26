@@ -64,18 +64,9 @@ def generate(diameter_range: [float, float],
         for j in range(len(diameter_dist)):
             x = np.random.randint(0, IMAGE_SIZE)
             y = np.random.randint(0, IMAGE_SIZE)
-            
-            # TODO: Determine axis ratio to classify as wind-driven dent
-            major_axis = diameter_dist[j]
-            minor_axis = major_axis * (1 - axis_variation * np.random.rand())
-
-            if (minor_axis / major_axis) <= 0.5:
-                angle = wind_angle
-            else:
-                angle = np.random.rand() * 360
 
             dent = create_dent(
-                x, y, major_axis, minor_axis, angle, SCALE)
+                x, y, major_axis, minor_axis, SCALE)
             
             dent_mask = np.zeros((IMAGE_SIZE, IMAGE_SIZE, 1), dtype=np.float32)
             cv2.drawContours(dent_mask, [dent], -1, 1, -1)
@@ -91,14 +82,13 @@ def generate(diameter_range: [float, float],
         _, image = cv2.threshold(image, 0, 1, cv2.THRESH_BINARY)
 
         create_point_queries(image, masks, directory, i, num_points)
-        cv2.imwrite(f'{directory}/hailpad_{i}.png', image * 255) # TODO: Remove
+        # cv2.imwrite(f'{directory}/hailpad_{i}.png', image * 255) # --- Uncomment to save PNGs
 
 
 def create_dent(cx: float,
                 cy: float,
                 major_axis: float,
                 minor_axis: float,
-                angle: float,
                 scale: float):
     '''
     Create irregular dent shape from base ellipse using Perlin noise along ellipse segments
@@ -112,6 +102,7 @@ def create_dent(cx: float,
         x = (major_axis / 2) * np.cos(theta)
         y = (minor_axis / 2) * np.sin(theta)
 
+        angle = np.random.rand() * 360
         x_rot = x * np.cos(np.radians(angle)) - y * np.sin(np.radians(angle))
         y_rot = x * np.sin(np.radians(angle)) + y * np.cos(np.radians(angle))
 

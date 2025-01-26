@@ -7,4 +7,6 @@ dent-segmentation-model/generator/measurement.py
 refined/
 results/
 test-binarizations/
+test-dataset/
 predictions/
+venv/
