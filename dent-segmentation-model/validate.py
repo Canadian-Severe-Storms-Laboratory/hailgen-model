@@ -3,13 +3,12 @@ os.environ['SM_FRAMEWORK'] = 'tf.keras'
 
 import keras
 import segmentation_models as sm
-from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import cv2
 import random
-from dataset import Dataset, DatasetLoader
+# from dataset import Dataset, DatasetLoader
 
 
 def get_random_color():
@@ -22,53 +21,37 @@ def get_random_color():
 
 def get_points(image):
     '''
-    Create point queries using DBSCAN clustering to identify distinct regions in dent clusters
+    Create point queries using K-Means clustering to identify distinct regions in dent clusters
     '''
-
     MAX_CLUSTER_SIZE = 5
-
     points = []
     cluster_image = np.zeros((image.shape[0], image.shape[1], 3), dtype=np.uint8)
     
-    contours, _ = cv2.findContours(
-        image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
     for contour in contours:
         cluster_mask = np.zeros_like(image, dtype=np.uint8)
         cv2.drawContours(cluster_mask, [contour], -1, 255, -1)
         
         cluster_points = np.column_stack(np.where(cluster_mask > 0))
         
-        db = DBSCAN(eps=5, min_samples=3).fit(cluster_points)
-        labels = db.labels_
+        if len(cluster_points) < MAX_CLUSTER_SIZE:
+            continue
         
-        unique_labels = set(labels)
-        for label in unique_labels:
-            if label == -1:
-                continue
-                
-            mask = (labels == label)
-            sub_cluster = cluster_points[mask]
-            
-            if len(sub_cluster) < MAX_CLUSTER_SIZE:
-                continue
-                
-            color = get_random_color()
-            
-            for point in sub_cluster:
-                cluster_image[point[0], point[1]] = color
-            
-            n_points = min(5, len(sub_cluster) // 20)
-            if n_points == 0:
-                n_points = 1  # (Retain at least one point per valid cluster)
-                
-            kmeans = KMeans(n_clusters=n_points, random_state=42)
-            kmeans.fit(sub_cluster)
-            
-            for center in kmeans.cluster_centers_:
-                points.append((int(center[0]), int(center[1])))
-                cv2.circle(cluster_image, (int(center[1]), int(center[0])), 1, (255, 255, 255), -1)
-
+        color = get_random_color()
+        for point in cluster_points:
+            cluster_image[point[1], point[0]] = color
+        
+        n_points = len(cluster_points) // 20
+        n_points = max(n_points, 1)
+        
+        kmeans = KMeans(n_clusters=n_points, random_state=42)
+        kmeans.fit(cluster_points)
+        
+        for center in kmeans.cluster_centers_:
+            points.append((int(center[0]), int(center[1])))
+            cv2.circle(cluster_image, (int(center[0]), int(center[1])), 1, (255, 255, 255), -1)
+    
     return points, cluster_image
 
 
@@ -92,8 +75,11 @@ def prepare_input_data(image, points):
 
 def get_iou(mask1, mask2):
     '''
-    Get IoU between two mask outputs (1, 2)
+    Get IoU between two mask outputs
     '''
+
+    mask1 = mask1 == 1
+    mask2 = mask2 == 1 
 
     intersection = np.logical_and(mask1, mask2).sum()
     union = np.logical_or(mask1, mask2).sum()
@@ -103,19 +89,28 @@ def get_iou(mask1, mask2):
 
 def refine_outputs(outputs):
     '''
-    Filter mask outputs with significant overlap
+    Filter mask outputs with significant overlap (prioritizing small prediction masks)
     '''
 
     filtered_outputs = []
-    THRESHOLD = 0.9
+    THRESHOLD = 0.8
 
     for output in outputs:
         is_overlapping = False
-        for filtered_output in filtered_outputs:
+
+        for i, filtered_output in enumerate(filtered_outputs):
             iou = get_iou(output, filtered_output)
+            
             if iou > THRESHOLD:
-                is_overlapping = True
-                break
+                if np.sum(output) < np.sum(filtered_output):
+           
+                    filtered_outputs[i] = output
+                    is_overlapping = True
+                    break
+                else:
+                    is_overlapping = True
+                    break
+        
         if not is_overlapping:
             filtered_outputs.append(output)
 
@@ -222,7 +217,7 @@ def main():
         input_data = np.stack(input_data, axis=0)
         print(f'Input data shape: {input_data.shape}')
         
-        predictions = batch_predict(model, input_data, BATCH_SIZE)
+        predictions = refine_outputs(batch_predict(model, input_data, BATCH_SIZE))
         output_dir = f'dent-segmentation-model/predictions/predictions-{file_name}'
         os.makedirs(f'{output_dir}/predictions-visualized', exist_ok=True)
         
