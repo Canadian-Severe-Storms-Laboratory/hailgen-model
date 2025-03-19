@@ -4,6 +4,7 @@ os.environ['SM_FRAMEWORK'] = 'tf.keras'
 import keras
 import segmentation_models as sm
 from sklearn.cluster import KMeans
+from sklearn.cluster import DBSCAN
 import numpy as np
 # import matplotlib.pyplot as plt
 import cv2
@@ -86,35 +87,43 @@ def get_iou(mask1, mask2):
 
     return intersection / union if union > 0 else 0
 
+import numpy as np
+from sklearn.cluster import DBSCAN
 
-def refine_outputs(outputs):
+def refine_outputs(masks):
     '''
-    Filter mask outputs with significant overlap (prioritizing small prediction masks)
+    Perform DBSCAN clustering to filter out mask outputs with significant overlap (prioritizing smaller prediction masks)
     '''
 
-    filtered_outputs = []
-    THRESHOLD = 0.8
+    n = len(masks)
+    dist_mat = np.zeros((n, n), dtype=float)
 
-    for output in outputs:
-        is_overlapping = False
+    masks = [mask > 0.5 for mask in masks]  
 
-        for i, filtered_output in enumerate(filtered_outputs):
-            iou = get_iou(output, filtered_output)
+    for i in range(n):
+        for j in range(i + 1, n):
+            and_count = float(np.bitwise_and(masks[i], masks[j]).sum())
+            or_count = float(np.bitwise_or(masks[i], masks[j]).sum() + 1)
+
+            dist = 1.0 - and_count / or_count
             
-            if iou > THRESHOLD:
-                if np.sum(output) < np.sum(filtered_output):
-           
-                    filtered_outputs[i] = output
-                    is_overlapping = True
-                    break
-                else:
-                    is_overlapping = True
-                    break
-        
-        if not is_overlapping:
-            filtered_outputs.append(output)
+            dist_mat[i, j] = dist
+            dist_mat[j, i] = dist
 
-    return filtered_outputs
+    dbscan = DBSCAN(eps=0.3, min_samples=1, metric='precomputed')
+    labels = dbscan.fit(dist_mat).labels_
+
+    filtered_masks = []
+
+    for label in set(labels):
+        cluster_predictions = [masks[i] for i in range(n) if labels[i] == label]
+        if label == -1:
+            filtered_masks.extend(cluster_predictions)
+        else:
+            smallest_prediction = min(cluster_predictions, key=lambda x: np.sum(x))
+            filtered_masks.append(smallest_prediction)
+
+    return filtered_masks
 
 
 def batch_predict(model, input_data, batch_size):
