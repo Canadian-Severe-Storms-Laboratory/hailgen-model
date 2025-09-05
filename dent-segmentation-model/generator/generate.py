@@ -48,8 +48,6 @@ def generate(diameter_range: [float, float],
         print(f'[Category {hailpad_type}] {i + 1}/{hailpad_count}')
         image = np.zeros((IMAGE_SIZE, IMAGE_SIZE, 1), dtype=np.float32)
 
-        wind_angle = np.random.rand() * 360
-
         if exp:
             # Exponential approximation: https://stackoverflow.com/questions/69828806/scaling-numpy-exponential-random-generator
             beta = -(diameter_range[1])/np.log(1 - 0.999)
@@ -65,6 +63,9 @@ def generate(diameter_range: [float, float],
             x = np.random.randint(0, IMAGE_SIZE)
             y = np.random.randint(0, IMAGE_SIZE)
 
+            major_axis = diameter_dist[j]
+            minor_axis = major_axis * (1 - axis_variation * np.random.rand())
+
             dent = create_dent(
                 x, y, major_axis, minor_axis, SCALE)
             
@@ -74,15 +75,21 @@ def generate(diameter_range: [float, float],
             dent_mask = cv2.resize(dent_mask, (256, 256), interpolation=cv2.INTER_AREA)
             _, dent_mask = cv2.threshold(dent_mask, 0, 1, cv2.THRESH_BINARY)
             
-            masks.append(dent_mask)
+            is_enclosed = False
+            for existing_mask in masks:
+                if np.all((dent_mask == 1) <= (existing_mask == 1)):
+                    is_enclosed = True
+                    break
             
-            cv2.drawContours(image, [dent], -1, 1, -1)
+            if not is_enclosed:
+                masks.append(dent_mask)
+                cv2.drawContours(image, [dent], -1, 1, -1)
          
         image = cv2.resize(image, (256, 256), interpolation=cv2.INTER_AREA)
         _, image = cv2.threshold(image, 0, 1, cv2.THRESH_BINARY)
 
         create_point_queries(image, masks, directory, i, num_points)
-        # cv2.imwrite(f'{directory}/hailpad_{i}.png', image * 255) # --- Uncomment to save PNGs
+        # cv2.imwrite(f'{directory}/hailpad_{i}.png', image * 255) # --- (Uncomment to also save as PNG)
 
 
 def create_dent(cx: float,

@@ -50,9 +50,18 @@ def get_points(image):
         kmeans.fit(cluster_points)
         
         for center in kmeans.cluster_centers_:
-            points.append((int(center[0]), int(center[1])))
-            cv2.circle(cluster_image, (int(center[0]), int(center[1])), 1, (255, 255, 255), -1)
-    
+            center_int = (int(center[0]), int(center[1]))
+            
+            if cluster_mask[center_int[0], center_int[1]] == 0:
+                distances = np.sqrt(np.sum((cluster_points - center) ** 2, axis=1))
+                nearest_idx = np.argmin(distances)
+                nearest_point = cluster_points[nearest_idx]
+                points.append((int(nearest_point[0]), int(nearest_point[1])))
+                cv2.circle(cluster_image, (int(nearest_point[0]), int(nearest_point[1])), 1, (255, 255, 255), -1)
+            else:
+                points.append(center_int)
+                cv2.circle(cluster_image, (int(center[0]), int(center[1])), 1, (255, 255, 255), -1)
+                
     return points, cluster_image
 
 

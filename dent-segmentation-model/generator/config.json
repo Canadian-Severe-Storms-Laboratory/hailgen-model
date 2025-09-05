@@ -22,7 +22,7 @@
         "axis_variation": 0.6,
         "dent_count": 900,
         "exp": false,
-        "hailpad_count": 50,
+        "hailpad_count": 100,
         "num_points": 4,
         "directory": "dent-segmentation-model/generator/output/2"
     },
@@ -40,7 +40,7 @@
         "axis_variation": 0.6,
         "dent_count": 900,
         "exp": true,
-        "hailpad_count": 100,
+        "hailpad_count": 400,
         "num_points": 3,
         "directory": "dent-segmentation-model/generator/output/4"
     }
